@@ -1,0 +1,19 @@
+[project]
+name = "ikb-agent"
+version = "0.1.0"
+description = "Enterprise RAG document processing and knowledge retrieval platform."
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.30.0",
+  "python-multipart>=0.0.9",
+  "pydantic>=2.7.0",
+  "langgraph>=0.2.0",
+  "python-dotenv>=1.0.1",
+  "pypdf>=4.2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+

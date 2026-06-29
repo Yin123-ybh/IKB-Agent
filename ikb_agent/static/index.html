@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IKB-Agent</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">
+        <svg width="34" height="34" viewBox="0 0 34 34" role="img" aria-label="IKB-Agent">
+          <rect x="3" y="3" width="28" height="28" rx="7" fill="#1f6feb"></rect>
+          <path d="M10 22V11h3v11h-3Zm5.5 0V11h3v4.4l4-4.4h3.8l-4.7 5.1 5.1 5.9h-4l-4.2-5v5h-3Z" fill="white"></path>
+        </svg>
+        <div>
+          <strong>IKB-Agent</strong>
+          <span>RAG 文档处理平台</span>
+        </div>
+      </div>
+      <nav>
+        <a href="#import">文档导入</a>
+        <a href="#query">知识问答</a>
+        <a href="#pipeline">处理链路</a>
+      </nav>
+      <div class="status" id="healthStatus">连接中...</div>
+    </aside>
+
+    <main>
+      <section class="topbar">
+        <div>
+          <h1>智能知识库系统</h1>
+          <p>PDF / Markdown 解析、语义切分、商品识别、混合检索与 RAG 问答演示。</p>
+        </div>
+        <button id="demoImportBtn">导入示例文档</button>
+      </section>
+
+      <section class="grid">
+        <div class="panel" id="import">
+          <div class="panel-head">
+            <h2>文档导入</h2>
+            <span>PDF / Markdown / TXT</span>
+          </div>
+          <form id="uploadForm" class="upload-box">
+            <input id="fileInput" type="file" accept=".pdf,.md,.markdown,.txt" />
+            <button type="submit">上传并入库</button>
+          </form>
+          <div id="importResult" class="result muted">等待上传文档。</div>
+        </div>
+
+        <div class="panel" id="query">
+          <div class="panel-head">
+            <h2>知识问答</h2>
+            <span>本地混合检索</span>
+          </div>
+          <form id="queryForm" class="query-box">
+            <textarea id="queryInput" rows="4" placeholder="例如：RS-12 如何测量直流电压？"></textarea>
+            <button type="submit">检索回答</button>
+          </form>
+          <div id="answerBox" class="answer muted">导入文档后开始提问。</div>
+        </div>
+      </section>
+
+      <section class="panel" id="pipeline">
+        <div class="panel-head">
+          <h2>导入处理链路</h2>
+          <span>LangGraph 节点模型</span>
+        </div>
+        <div class="flow">
+          <div>Entry</div>
+          <div>PDF 转 Markdown</div>
+          <div>图片语义化</div>
+          <div>标题层级切分</div>
+          <div>商品名识别</div>
+          <div>Embedding</div>
+          <div>向量入库</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>已导入文档</h2>
+          <span id="docCount">0</span>
+        </div>
+        <div id="documents" class="documents"></div>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
+
