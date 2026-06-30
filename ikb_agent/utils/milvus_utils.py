@@ -23,13 +23,26 @@ class MilvusVectorStore:
     def ensure_chunk_collection(self) -> None:
         if self.settings.chunks_collection in self.client.list_collections():
             return
+        from pymilvus import DataType
+
+        schema = self.client.create_schema(auto_id=False, enable_dynamic_field=False)
+        schema.add_field(field_name="id", datatype=DataType.VARCHAR, is_primary=True, max_length=64)
+        schema.add_field(field_name="vector", datatype=DataType.FLOAT_VECTOR, dim=self.settings.embedding_dim)
+        schema.add_field(field_name="document_id", datatype=DataType.VARCHAR, max_length=64)
+        schema.add_field(field_name="title", datatype=DataType.VARCHAR, max_length=512)
+        schema.add_field(field_name="item_name", datatype=DataType.VARCHAR, max_length=256)
+        schema.add_field(field_name="file_title", datatype=DataType.VARCHAR, max_length=512)
+        schema.add_field(field_name="content", datatype=DataType.VARCHAR, max_length=8192)
+        index_params = self.client.prepare_index_params()
+        index_params.add_index(
+            field_name="vector",
+            index_type="AUTOINDEX",
+            metric_type=self.settings.milvus_metric_type,
+        )
         self.client.create_collection(
             collection_name=self.settings.chunks_collection,
-            dimension=self.settings.embedding_dim,
-            metric_type=self.settings.milvus_metric_type,
-            auto_id=False,
-            id_type="string",
-            max_length=64,
+            schema=schema,
+            index_params=index_params,
         )
 
     def upsert_chunks(self, chunks: list[ChunkRecord]) -> int:
@@ -49,5 +62,5 @@ class MilvusVectorStore:
             )
         if rows:
             self.client.upsert(collection_name=self.settings.chunks_collection, data=rows)
+            self.client.flush(collection_name=self.settings.chunks_collection)
         return len(rows)
-

@@ -24,4 +24,3 @@ async def import_document(
 @router.post("/demo-import")
 def demo_import(service: ImportService = Depends(get_import_service)):
     return service.import_demo().model_dump()
-

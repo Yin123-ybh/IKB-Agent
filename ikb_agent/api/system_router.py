@@ -16,8 +16,8 @@ def health() -> dict:
     return {
         "status": "ok",
         "app": settings.app_name,
-        "store": str(settings.store_path),
-        "mode": "local-json-store",
+        "store": str(settings.store_path) if settings.store_backend == "json" else settings.milvus_url,
+        "mode": "local-json-store" if settings.store_backend == "json" else "milvus-middleware-store",
     }
 
 
@@ -34,4 +34,3 @@ def tasks(service: TaskService = Depends(get_task_service)) -> dict:
 @router.get("/tasks/{task_id}")
 def task_detail(task_id: str, service: TaskService = Depends(get_task_service)) -> dict:
     return service.get_task(task_id)
-

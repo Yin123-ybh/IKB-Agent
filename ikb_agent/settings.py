@@ -22,6 +22,7 @@ class Settings:
     app_name: str = os.getenv("APP_NAME", "IKB-Agent")
     data_dir: Path = Path(os.getenv("DATA_DIR", "./data"))
     environment: str = os.getenv("ENVIRONMENT", "local")
+    store_backend: str = os.getenv("STORE_BACKEND", "json").lower()
     max_chunk_chars: int = int(os.getenv("MAX_CHUNK_CHARS", "1200"))
     min_chunk_chars: int = int(os.getenv("MIN_CHUNK_CHARS", "260"))
     item_name_chunk_k: int = int(os.getenv("ITEM_NAME_CHUNK_K", "3"))

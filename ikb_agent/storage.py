@@ -7,7 +7,12 @@ from threading import RLock
 from datetime import datetime
 
 from .models import ChunkRecord, DocumentRecord, ImportTaskRecord, SearchHit
+from .settings import Settings
 from .text_utils import cosine, sparse_overlap, sparse_vectorize, vectorize
+from .utils.embedding_utils import dense_dict_to_list
+from .utils.milvus_utils import MilvusVectorStore
+from .utils.minio_utils import MinioResourceStore
+from .utils.mongo_history_utils import MongoHistoryStore
 
 
 class JsonKnowledgeStore:
@@ -113,3 +118,87 @@ class JsonKnowledgeStore:
                 )
             )
         return sorted(hits, key=lambda hit: hit.score, reverse=True)[:top_k]
+
+
+class HybridKnowledgeStore:
+    """Milvus/MinIO/MongoDB backed store with JSON metadata fallback.
+
+    Milvus stores vector-searchable chunks, MongoDB stores import tasks, and
+    MinIO is used by ImportService for original files. Documents are mirrored
+    into the JSON store to keep the existing lightweight document list API.
+    """
+
+    def __init__(self, settings: Settings, fallback: JsonKnowledgeStore):
+        self.settings = settings
+        self.fallback = fallback
+        self.milvus = MilvusVectorStore(settings)
+        self.mongo = MongoHistoryStore(settings)
+        self.minio = MinioResourceStore(settings)
+
+    def upsert_document(self, document: DocumentRecord, chunks: list[ChunkRecord]) -> None:
+        self.fallback.upsert_document(document, chunks)
+        self.milvus.upsert_chunks(chunks)
+
+    def upsert_task(self, task: ImportTaskRecord) -> None:
+        self.fallback.upsert_task(task)
+        self.mongo.db.import_tasks.replace_one({"task_id": task.task_id}, task.model_dump(), upsert=True)
+
+    def update_task(self, task_id: str, **updates) -> ImportTaskRecord:
+        task = self.fallback.update_task(task_id, **updates)
+        self.mongo.db.import_tasks.replace_one({"task_id": task.task_id}, task.model_dump(), upsert=True)
+        return task
+
+    def get_task(self, task_id: str) -> ImportTaskRecord | None:
+        item = self.mongo.db.import_tasks.find_one({"task_id": task_id}, {"_id": 0})
+        if item:
+            return ImportTaskRecord(**item)
+        return self.fallback.get_task(task_id)
+
+    def list_tasks(self) -> list[ImportTaskRecord]:
+        items = list(self.mongo.db.import_tasks.find({}, {"_id": 0}).sort("created_at", -1))
+        if items:
+            return [ImportTaskRecord(**item) for item in items]
+        return self.fallback.list_tasks()
+
+    def list_documents(self) -> list[DocumentRecord]:
+        return self.fallback.list_documents()
+
+    def list_chunks(self) -> list[ChunkRecord]:
+        return self.fallback.list_chunks()
+
+    def search(self, query: str, top_k: int = 5, item_names: list[str] | None = None) -> list[SearchHit]:
+        filters = [name.strip() for name in item_names or [] if name.strip()]
+        expr = ""
+        if filters:
+            escaped = ", ".join(repr(name) for name in filters)
+            expr = f"item_name in [{escaped}]"
+
+        query_vector = dense_dict_to_list(vectorize(query), self.settings.embedding_dim)
+        rows = self.milvus.client.search(
+            collection_name=self.settings.chunks_collection,
+            data=[query_vector],
+            limit=top_k,
+            filter=expr or None,
+            output_fields=["document_id", "title", "item_name", "file_title", "content"],
+        )
+        hits: list[SearchHit] = []
+        for row in rows[0] if rows else []:
+            entity = row.get("entity", {})
+            distance = float(row.get("distance", 0.0))
+            score = distance if self.settings.milvus_metric_type.upper() == "COSINE" else 1 / (1 + distance)
+            if score < self.settings.milvus_min_cosine_score:
+                continue
+            hits.append(
+                SearchHit(
+                    chunk_id=str(row.get("id", "")),
+                    document_id=entity.get("document_id", ""),
+                    title=entity.get("title", ""),
+                    item_name=entity.get("item_name", ""),
+                    file_title=entity.get("file_title", ""),
+                    content=entity.get("content", ""),
+                    score=round(score, 5),
+                    dense_score=round(score, 5),
+                    sparse_score=0.0,
+                )
+            )
+        return hits

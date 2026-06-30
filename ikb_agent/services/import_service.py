@@ -40,6 +40,8 @@ class ImportService:
         try:
             temp_path = temp_dir / original_name
             temp_path.write_bytes(await file.read())
+            if hasattr(self.store, "minio"):
+                self.store.minio.upload_file(f"documents/{task_id}/{original_name}", temp_path)
             response = run_import(temp_path, self.store, self.settings, document_id=task_id)
             task_message = response.message
             response.task = self.store.update_task(
@@ -84,6 +86,8 @@ RS-12 数字万用表支持直流电压、交流电压、电阻和通断测量�
                 message="Demo import started",
             )
         )
+        if hasattr(self.store, "minio"):
+            self.store.minio.upload_file(f"documents/{task_id}/{sample_path.name}", sample_path, content_type="text/markdown")
         response = run_import(sample_path, self.store, self.settings, document_id=task_id)
         response.task = self.store.update_task(
             task_id,

@@ -9,6 +9,7 @@ __pycache__/
 .ruff_cache/
 data/*
 !data/.gitkeep
+volumes/
 dist/
 build/
 *.egg-info/
