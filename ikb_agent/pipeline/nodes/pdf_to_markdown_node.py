@@ -72,8 +72,25 @@ class PdfToMarkdownNode(BasePipelineNode):
 
         mineru_output_dir = output_dir / "mineru"
         mineru_output_dir.mkdir(parents=True, exist_ok=True)
+        base_command = [
+            command,
+            "-p",
+            str(pdf_path),
+            "-o",
+            str(mineru_output_dir),
+            "-m",
+            self.settings.mineru_method,
+            "-b",
+            self.settings.mineru_backend,
+            "-f",
+            str(self.settings.mineru_formula).lower(),
+            "-t",
+            str(self.settings.mineru_table).lower(),
+            "--image-analysis",
+            str(self.settings.mineru_image_analysis).lower(),
+        ]
         candidates = [
-            [command, "-p", str(pdf_path), "-o", str(mineru_output_dir), "-m", self.settings.mineru_method],
+            base_command,
             [command, "-p", str(pdf_path), "-o", str(mineru_output_dir)],
         ]
         last_error = ""
@@ -89,7 +106,7 @@ class PdfToMarkdownNode(BasePipelineNode):
                     return md_path
                 last_error = "MinerU completed but no Markdown file was found."
             else:
-                last_error = (result.stderr or result.stdout or "").strip()[-1000:]
+                last_error = self._compact_error(result.stderr or result.stdout or "")
         warnings.append(f"MinerU parsing failed: {last_error}")
         return None
 
@@ -105,3 +122,14 @@ class PdfToMarkdownNode(BasePipelineNode):
             return command
         sibling = Path(sys.executable).parent / name
         return str(sibling) if sibling.exists() else None
+
+    @staticmethod
+    def _compact_error(output: str) -> str:
+        output = (output or "").strip()
+        marker = "Error no file named"
+        if marker in output:
+            return output[output.rfind(marker) :].splitlines()[0]
+        marker = "Error:"
+        if marker in output:
+            return output[output.rfind(marker) :].strip()[-1000:]
+        return output[-1000:]

@@ -58,6 +58,9 @@ pip install -e ".[pdf,middleware,mineru]"
 PDF_PARSE_BACKEND=mineru
 MINERU_CLI=mineru
 MINERU_METHOD=auto
+MINERU_BACKEND=pipeline
+MINERU_FORMULA=false
+MINERU_TABLE=true
 ```
 
 检查 MinerU 是否就绪：
@@ -163,6 +166,8 @@ Docker 中间件和大模型都配置好后，`.env` 推荐使用：
 ```env
 STORE_BACKEND=milvus
 PDF_PARSE_BACKEND=mineru
+MINERU_BACKEND=pipeline
+MINERU_FORMULA=false
 ENABLE_EXTERNAL_LLM=true
 OPENAI_API_BASE=https://dashscope.aliyuncs.com/compatible-mode/v1
 LLM_DEFAULT_MODEL=qwen-flash
