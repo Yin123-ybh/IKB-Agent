@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from .base import BasePipelineNode
@@ -62,9 +63,9 @@ class PdfToMarkdownNode(BasePipelineNode):
         return state
 
     def _parse_with_mineru(self, pdf_path: Path, output_dir: Path, warnings: list[str]) -> Path | None:
-        command = shutil.which(self.settings.mineru_cli)
+        command = self._resolve_cli(self.settings.mineru_cli)
         if not command and self.settings.mineru_cli == "mineru":
-            command = shutil.which("magic-pdf")
+            command = self._resolve_cli("magic-pdf")
         if not command:
             warnings.append("MinerU CLI not found. Install MinerU or set MINERU_CLI.")
             return None
@@ -96,3 +97,11 @@ class PdfToMarkdownNode(BasePipelineNode):
     def _find_mineru_markdown(output_dir: Path, pdf_stem: str) -> Path | None:
         markdown_files = sorted(output_dir.rglob("*.md"), key=lambda path: (path.stem != pdf_stem, len(path.parts)))
         return markdown_files[0] if markdown_files else None
+
+    @staticmethod
+    def _resolve_cli(name: str) -> str | None:
+        command = shutil.which(name)
+        if command:
+            return command
+        sibling = Path(sys.executable).parent / name
+        return str(sibling) if sibling.exists() else None

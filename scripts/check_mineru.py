@@ -11,6 +11,14 @@ sys.path.insert(0, str(ROOT))
 from ikb_agent.settings import get_settings
 
 
+def resolve_cli(name: str) -> str | None:
+    command = shutil.which(name)
+    if command:
+        return command
+    sibling = Path(sys.executable).parent / name
+    return str(sibling) if sibling.exists() else None
+
+
 def main() -> None:
     settings = get_settings()
     print(f"python={sys.version.split()[0]}")
@@ -21,7 +29,7 @@ def main() -> None:
     else:
         print("[ OK ] Python version is suitable for MinerU.")
 
-    command = shutil.which(settings.mineru_cli) or shutil.which("magic-pdf")
+    command = resolve_cli(settings.mineru_cli) or resolve_cli("magic-pdf")
     if not command:
         print("[FAIL] MinerU CLI not found. Install with: pip install -e '.[mineru]'")
         return
