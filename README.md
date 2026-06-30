@@ -13,6 +13,7 @@
 - Dense + Sparse 本地混合检索
 - FastAPI 后端接口
 - 面试演示用前端页面
+- 导入任务状态与执行链路追踪
 - 可扩展到 MinerU、Qwen3-VL-Flash、BGE-M3、Milvus、MinIO
 
 ## 架构流程
@@ -48,6 +49,14 @@ pip install -r requirements.txt
 uvicorn ikb_agent.main:app --reload
 ```
 
+如需本地直接抽取 PDF 文本，可额外安装：
+
+```bash
+pip install ".[pdf]"
+```
+
+生产版本建议接入 MinerU 解析复杂 PDF、表格和图片。
+
 打开：
 
 ```text
@@ -74,6 +83,13 @@ curl http://127.0.0.1:8000/api/health
 curl -F "file=@demo.md" http://127.0.0.1:8000/api/import
 ```
 
+### 查询导入任务
+
+```bash
+curl http://127.0.0.1:8000/api/tasks
+curl http://127.0.0.1:8000/api/tasks/{task_id}
+```
+
 ### 查询知识库
 
 ```bash
@@ -98,6 +114,7 @@ IKB-Agent/
 │   │   └── state.py             # 图状态定义
 │   └── static/                  # 前端演示页面
 ├── tests/
+├── .github/workflows/ci.yml
 ├── docs/
 ├── docker-compose.yml
 ├── requirements.txt
@@ -140,6 +157,6 @@ docker compose up -d
 ## 测试
 
 ```bash
+pip install ".[dev]"
 pytest
 ```
-

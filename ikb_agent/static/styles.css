@@ -208,12 +208,14 @@ textarea {
   font-size: 13px;
 }
 
-.documents {
+.documents,
+.tasks {
   display: grid;
   gap: 10px;
 }
 
-.doc {
+.doc,
+.task {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 10px;
@@ -223,13 +225,30 @@ textarea {
   background: #fbfdff;
 }
 
-.doc strong {
+.doc strong,
+.task strong {
   display: block;
 }
 
-.doc span {
+.doc span,
+.task span {
   color: var(--muted);
   font-size: 13px;
+}
+
+.badge {
+  align-self: start;
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: #eaf7f0;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.badge.failed {
+  background: #ffebe9;
+  color: var(--red);
 }
 
 .hit {
@@ -260,4 +279,3 @@ textarea {
     flex-direction: column;
   }
 }
-

@@ -28,11 +28,24 @@ class DocumentRecord(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
 
 
+class ImportTaskRecord(BaseModel):
+    task_id: str
+    file_name: str
+    status: str = "pending"
+    progress: int = Field(default=0, ge=0, le=100)
+    message: str = ""
+    trace: list[str] = Field(default_factory=list)
+    document_id: str | None = None
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
+    updated_at: str = Field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
+
+
 class ImportResponse(BaseModel):
     message: str
     document: DocumentRecord
     chunks: list[ChunkRecord]
     trace: list[str]
+    task: ImportTaskRecord | None = None
 
 
 class SearchHit(BaseModel):
@@ -58,4 +71,3 @@ class QueryResponse(BaseModel):
     hits: list[SearchHit]
     rewritten_query: str
     item_names: list[str]
-

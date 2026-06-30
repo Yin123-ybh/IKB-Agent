@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+from uuid import uuid4
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from .models import QueryRequest, QueryResponse
+from .models import ImportTaskRecord, QueryRequest, QueryResponse
 from .pipeline import run_import
 from .settings import get_settings
 from .storage import JsonKnowledgeStore
@@ -54,6 +55,19 @@ def documents() -> dict:
     return {"documents": [document.model_dump() for document in store.list_documents()]}
 
 
+@app.get("/api/tasks")
+def tasks() -> dict:
+    return {"tasks": [task.model_dump() for task in store.list_tasks()]}
+
+
+@app.get("/api/tasks/{task_id}")
+def task_detail(task_id: str) -> dict:
+    task = store.get_task(task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task.model_dump()
+
+
 @app.post("/api/import")
 async def import_document(file: UploadFile = File(...)):
     original_name = Path(file.filename or "document.md").name
@@ -61,15 +75,44 @@ async def import_document(file: UploadFile = File(...)):
     if suffix not in {".pdf", ".md", ".markdown", ".txt"}:
         raise HTTPException(status_code=400, detail="Only PDF, Markdown, and TXT files are supported.")
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_path = Path(temp_dir) / original_name
-        temp_path.write_bytes(await file.read())
-        response = run_import(temp_path, store, settings)
+    task_id = uuid4().hex[:12]
+    task = ImportTaskRecord(
+        task_id=task_id,
+        file_name=original_name,
+        status="processing",
+        progress=10,
+        message="Document import started",
+    )
+    store.upsert_task(task)
+
+    try:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir) / original_name
+            temp_path.write_bytes(await file.read())
+            response = run_import(temp_path, store, settings, document_id=task_id)
+        completed = store.update_task(
+            task_id,
+            status="completed",
+            progress=100,
+            message="Document imported successfully",
+            trace=response.trace,
+            document_id=response.document.document_id,
+        )
+        response.task = completed
         return response.model_dump()
+    except Exception as exc:
+        store.update_task(
+            task_id,
+            status="failed",
+            progress=100,
+            message=str(exc),
+        )
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @app.post("/api/demo-import")
 def demo_import():
+    task_id = uuid4().hex[:12]
     sample_path = settings.data_dir / "RS-12数字万用表.md"
     sample_path.write_text(
         """# RS-12 数字万用表使用说明
@@ -88,7 +131,24 @@ RS-12 数字万用表支持直流电压、交流电压、电阻和通断测量�
 """,
         encoding="utf-8",
     )
-    response = run_import(sample_path, store, settings)
+    store.upsert_task(
+        ImportTaskRecord(
+            task_id=task_id,
+            file_name=sample_path.name,
+            status="processing",
+            progress=10,
+            message="Demo import started",
+        )
+    )
+    response = run_import(sample_path, store, settings, document_id=task_id)
+    response.task = store.update_task(
+        task_id,
+        status="completed",
+        progress=100,
+        message="Demo document imported successfully",
+        trace=response.trace,
+        document_id=response.document.document_id,
+    )
     return response.model_dump()
 
 

@@ -4,7 +4,9 @@ import json
 from pathlib import Path
 from threading import RLock
 
-from .models import ChunkRecord, DocumentRecord, SearchHit
+from datetime import datetime
+
+from .models import ChunkRecord, DocumentRecord, ImportTaskRecord, SearchHit
 from .text_utils import cosine, sparse_overlap, sparse_vectorize, vectorize
 
 
@@ -21,12 +23,16 @@ class JsonKnowledgeStore:
         self._lock = RLock()
         self.path.parent.mkdir(parents=True, exist_ok=True)
         if not self.path.exists():
-            self._write({"documents": [], "chunks": []})
+            self._write({"documents": [], "chunks": [], "tasks": []})
 
     def _read(self) -> dict:
         with self._lock:
             with self.path.open("r", encoding="utf-8") as file:
-                return json.load(file)
+                data = json.load(file)
+                data.setdefault("documents", [])
+                data.setdefault("chunks", [])
+                data.setdefault("tasks", [])
+                return data
 
     def _write(self, data: dict) -> None:
         with self._lock:
@@ -40,6 +46,36 @@ class JsonKnowledgeStore:
         data["documents"].append(document.model_dump())
         data["chunks"].extend(chunk.model_dump() for chunk in chunks)
         self._write(data)
+
+    def upsert_task(self, task: ImportTaskRecord) -> None:
+        data = self._read()
+        data["tasks"] = [item for item in data["tasks"] if item["task_id"] != task.task_id]
+        data["tasks"].append(task.model_dump())
+        self._write(data)
+
+    def update_task(self, task_id: str, **updates) -> ImportTaskRecord:
+        data = self._read()
+        existing = next((item for item in data["tasks"] if item["task_id"] == task_id), None)
+        if existing is None:
+            existing = {"task_id": task_id, "file_name": "", "status": "pending"}
+        existing.update(updates)
+        existing["updated_at"] = datetime.now().isoformat(timespec="seconds")
+        task = ImportTaskRecord(**existing)
+        data["tasks"] = [item for item in data["tasks"] if item["task_id"] != task_id]
+        data["tasks"].append(task.model_dump())
+        self._write(data)
+        return task
+
+    def get_task(self, task_id: str) -> ImportTaskRecord | None:
+        data = self._read()
+        for item in data["tasks"]:
+            if item["task_id"] == task_id:
+                return ImportTaskRecord(**item)
+        return None
+
+    def list_tasks(self) -> list[ImportTaskRecord]:
+        data = self._read()
+        return [ImportTaskRecord(**item) for item in sorted(data["tasks"], key=lambda row: row["created_at"], reverse=True)]
 
     def list_documents(self) -> list[DocumentRecord]:
         data = self._read()
@@ -77,4 +113,3 @@ class JsonKnowledgeStore:
                 )
             )
         return sorted(hits, key=lambda hit: hit.score, reverse=True)[:top_k]
-

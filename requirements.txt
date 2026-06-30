@@ -4,6 +4,3 @@ python-multipart>=0.0.9
 pydantic>=2.7.0
 langgraph>=0.2.0
 python-dotenv>=1.0.1
-pypdf>=4.2.0
-pytest>=8.2.0
-

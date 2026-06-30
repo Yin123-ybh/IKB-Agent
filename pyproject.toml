@@ -10,10 +10,12 @@ dependencies = [
   "pydantic>=2.7.0",
   "langgraph>=0.2.0",
   "python-dotenv>=1.0.1",
-  "pypdf>=4.2.0",
 ]
+
+[project.optional-dependencies]
+pdf = ["pypdf>=4.2.0"]
+dev = ["pytest>=8.2.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-

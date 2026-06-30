@@ -8,6 +8,8 @@ const answerBox = document.querySelector("#answerBox");
 const demoImportBtn = document.querySelector("#demoImportBtn");
 const documentsBox = document.querySelector("#documents");
 const docCount = document.querySelector("#docCount");
+const tasksBox = document.querySelector("#tasks");
+const taskCount = document.querySelector("#taskCount");
 
 async function api(path, options = {}) {
   const response = await fetch(path, options);
@@ -45,6 +47,24 @@ async function loadDocuments() {
     .join("");
 }
 
+async function loadTasks() {
+  const data = await api("/api/tasks");
+  taskCount.textContent = `${data.tasks.length} 个任务`;
+  tasksBox.innerHTML = data.tasks
+    .map(
+      (task) => `
+        <div class="task">
+          <div>
+            <strong>${escapeHtml(task.file_name)}</strong>
+            <span>${task.progress}% · ${escapeHtml(task.message)} · ${escapeHtml(task.trace.join(" -> "))}</span>
+          </div>
+          <span class="badge ${task.status === "failed" ? "failed" : ""}">${escapeHtml(task.status)}</span>
+        </div>
+      `
+    )
+    .join("");
+}
+
 uploadForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!fileInput.files.length) {
@@ -61,6 +81,7 @@ uploadForm.addEventListener("submit", async (event) => {
 Chunk 数量：${data.document.chunk_count}
 执行链路：${data.trace.join(" -> ")}`;
     await loadDocuments();
+    await loadTasks();
   } catch (error) {
     importResult.textContent = `导入失败：${error.message}`;
   }
@@ -75,6 +96,7 @@ demoImportBtn.addEventListener("click", async () => {
 Chunk 数量：${data.document.chunk_count}
 执行链路：${data.trace.join(" -> ")}`;
     await loadDocuments();
+    await loadTasks();
   } catch (error) {
     importResult.textContent = `示例导入失败：${error.message}`;
   }
@@ -122,4 +144,4 @@ function escapeHtml(value) {
 
 loadHealth();
 loadDocuments();
-
+loadTasks();

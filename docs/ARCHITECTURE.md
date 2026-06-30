@@ -29,9 +29,24 @@ md_content
 chunks
 item_name
 trace
+task_id
 ```
 
 Each node reads a small subset and writes its own output. This makes every node independently testable.
+
+## Task Tracking
+
+Every import request creates an `ImportTaskRecord`. The API updates it from
+`processing` to `completed` or `failed`, stores progress, and persists the
+LangGraph node trace:
+
+```text
+entry_node -> markdown_load_node -> md_image_node -> document_split_node
+  -> item_name_recognition_node -> bge_embedding_chunks_node -> milvus_import_node
+```
+
+The current implementation stores tasks in the local JSON store. In production,
+the same record can be moved to Redis, MySQL, or MongoDB.
 
 ## Retrieval
 
@@ -42,4 +57,3 @@ score = 0.64 * dense_cosine + 0.36 * sparse_overlap
 ```
 
 Production systems can replace this with Milvus hybrid search and BGE-M3 vectors while keeping the same chunk schema.
-
