@@ -37,6 +37,9 @@ class Settings:
     enable_external_llm: bool = _bool_env("ENABLE_EXTERNAL_LLM", False)
 
     mineru_model_source: str = os.getenv("MINERU_MODEL_SOURCE", "modelscope")
+    pdf_parse_backend: str = os.getenv("PDF_PARSE_BACKEND", "pypdf").lower()
+    mineru_cli: str = os.getenv("MINERU_CLI", "mineru")
+    mineru_method: str = os.getenv("MINERU_METHOD", "auto")
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "local-hash")
     embedding_dim: int = int(os.getenv("EMBEDDING_DIM", "1024"))
     bge_m3_path: str = os.getenv("BGE_M3_PATH", "")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -11,7 +12,7 @@ from ..settings import Settings, get_settings
 @dataclass
 class ChatMessage:
     role: str
-    content: str
+    content: Any
 
 
 class OpenAICompatibleLLM:
@@ -51,4 +52,3 @@ class OpenAICompatibleLLM:
 
 def get_llm_client(settings: Settings | None = None) -> OpenAICompatibleLLM:
     return OpenAICompatibleLLM(settings)
-

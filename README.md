@@ -55,7 +55,17 @@ uvicorn ikb_agent.main:app --reload
 pip install ".[pdf]"
 ```
 
-生产版本建议接入 MinerU 解析复杂 PDF、表格和图片。
+课件完整版建议使用 MinerU 解析复杂 PDF、表格和图片：
+
+```bash
+pip install ".[mineru]"
+```
+
+然后在 `.env` 中设置：
+
+```env
+PDF_PARSE_BACKEND=mineru
+```
 
 打开：
 

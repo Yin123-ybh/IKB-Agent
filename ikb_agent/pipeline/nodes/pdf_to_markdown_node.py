@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import shutil
+import subprocess
 from pathlib import Path
 
 from .base import BasePipelineNode
@@ -9,8 +11,8 @@ from ..state import ImportState
 class PdfToMarkdownNode(BasePipelineNode):
     """Convert PDF to Markdown.
 
-    Local mode tries pypdf when installed. Production mode can replace this
-    node with MinerU while keeping the same state contract.
+    Production mode uses MinerU to recover headings, tables, and image assets.
+    Local mode can still use pypdf as a lightweight fallback.
     """
 
     name = "pdf_to_md_node"
@@ -20,9 +22,18 @@ class PdfToMarkdownNode(BasePipelineNode):
         output_dir = Path(state["file_dir"]) / state["document_id"]
         output_dir.mkdir(parents=True, exist_ok=True)
         md_path = output_dir / f"{pdf_path.stem}.md"
+        warnings = state.setdefault("warnings", [])
+
+        if self.settings.pdf_parse_backend in {"mineru", "auto"}:
+            mineru_md = self._parse_with_mineru(pdf_path, output_dir, warnings)
+            if mineru_md:
+                state["md_path"] = str(mineru_md)
+                state["is_md_read_enabled"] = True
+                return state
+            if self.settings.pdf_parse_backend == "mineru":
+                raise RuntimeError("MinerU parsing failed. Check MINERU_CLI, Python version, and model configuration.")
 
         pages: list[str] = []
-        warnings = state.setdefault("warnings", [])
         try:
             from pypdf import PdfReader
 
@@ -49,3 +60,39 @@ class PdfToMarkdownNode(BasePipelineNode):
         state["md_path"] = str(md_path)
         state["is_md_read_enabled"] = True
         return state
+
+    def _parse_with_mineru(self, pdf_path: Path, output_dir: Path, warnings: list[str]) -> Path | None:
+        command = shutil.which(self.settings.mineru_cli)
+        if not command and self.settings.mineru_cli == "mineru":
+            command = shutil.which("magic-pdf")
+        if not command:
+            warnings.append("MinerU CLI not found. Install MinerU or set MINERU_CLI.")
+            return None
+
+        mineru_output_dir = output_dir / "mineru"
+        mineru_output_dir.mkdir(parents=True, exist_ok=True)
+        candidates = [
+            [command, "-p", str(pdf_path), "-o", str(mineru_output_dir), "-m", self.settings.mineru_method],
+            [command, "-p", str(pdf_path), "-o", str(mineru_output_dir)],
+        ]
+        last_error = ""
+        for candidate in candidates:
+            try:
+                result = subprocess.run(candidate, capture_output=True, text=True, timeout=900, check=False)
+            except Exception as exc:
+                last_error = str(exc)
+                continue
+            if result.returncode == 0:
+                md_path = self._find_mineru_markdown(mineru_output_dir, pdf_path.stem)
+                if md_path:
+                    return md_path
+                last_error = "MinerU completed but no Markdown file was found."
+            else:
+                last_error = (result.stderr or result.stdout or "").strip()[-1000:]
+        warnings.append(f"MinerU parsing failed: {last_error}")
+        return None
+
+    @staticmethod
+    def _find_mineru_markdown(output_dir: Path, pdf_stem: str) -> Path | None:
+        markdown_files = sorted(output_dir.rglob("*.md"), key=lambda path: (path.stem != pdf_stem, len(path.parts)))
+        return markdown_files[0] if markdown_files else None
