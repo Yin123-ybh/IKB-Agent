@@ -72,7 +72,7 @@ async function loadTasks() {
         <div class="task">
           <div>
             <strong>${escapeHtml(task.file_name)}</strong>
-            <span>${task.progress}% · ${escapeHtml(task.message)} · ${escapeHtml(task.trace.join(" -> "))}</span>
+            <span>${escapeHtml(task.parse_mode || "pypdf")} · ${task.progress}% · ${escapeHtml(task.message)} · ${escapeHtml(task.trace.join(" -> "))}</span>
           </div>
           <span class="badge ${task.status === "failed" ? "failed" : ""} ${task.status === "processing" ? "processing" : ""}">${escapeHtml(task.status)}</span>
         </div>
@@ -98,9 +98,10 @@ uploadForm.addEventListener("submit", async (event) => {
   const parseMode = getSelectedParseMode();
   const form = new FormData();
   form.append("file", fileInput.files[0]);
+  form.append("parse_mode", parseMode);
   importResult.textContent = `正在执行导入链路...
 前端选择：${parseModeLabels[parseMode]}
-提示：当前后端仍按 .env 中的 PDF_PARSE_BACKEND 执行。`;
+后端模式：${parseMode}`;
   try {
     const data = await api("/api/import", { method: "POST", body: form });
     importResult.textContent = `${data.message.includes("warnings") ? "导入完成但有警告" : "导入成功"}：${data.document.file_title}

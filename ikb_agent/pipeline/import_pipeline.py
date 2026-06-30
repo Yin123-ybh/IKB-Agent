@@ -67,9 +67,11 @@ def run_import(
     store: JsonKnowledgeStore,
     settings: Settings | None = None,
     document_id: str | None = None,
+    parse_mode: str | None = None,
 ) -> ImportResponse:
     settings = settings or get_settings()
     document_id = document_id or uuid4().hex[:12]
+    parse_mode = parse_mode or settings.pdf_parse_backend
     staged_file = copy_to_upload_dir(file_path, settings.upload_dir, document_id)
     app = build_import_graph(settings, store)
     state: ImportState = {
@@ -77,6 +79,7 @@ def run_import(
         "document_id": document_id,
         "import_file_path": str(staged_file),
         "file_dir": str(settings.data_dir / "processed"),
+        "parse_mode": parse_mode,
     }
     result = app.invoke(state)
     warnings = result.get("warnings", [])

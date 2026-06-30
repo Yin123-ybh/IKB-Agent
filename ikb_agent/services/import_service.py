@@ -15,25 +15,28 @@ class ImportService:
     """Application service for document import use cases."""
 
     supported_suffixes = {".pdf", ".md", ".markdown", ".txt"}
+    supported_parse_modes = {"pypdf", "mineru", "minneru", "auto"}
 
     def __init__(self, settings: Settings, store: JsonKnowledgeStore):
         self.settings = settings
         self.store = store
 
-    async def import_upload(self, file: UploadFile, temp_dir: Path) -> ImportResponse:
+    async def import_upload(self, file: UploadFile, temp_dir: Path, parse_mode: str = "pypdf") -> ImportResponse:
         original_name = Path(file.filename or "document.md").name
         suffix = Path(original_name).suffix.lower()
         if suffix not in self.supported_suffixes:
             raise HTTPException(status_code=400, detail="Only PDF, Markdown, and TXT files are supported.")
+        parse_mode = self._normalize_parse_mode(parse_mode)
 
         task_id = uuid4().hex[:12]
         self.store.upsert_task(
             ImportTaskRecord(
                 task_id=task_id,
                 file_name=original_name,
+                parse_mode=parse_mode,
                 status="processing",
                 progress=10,
-                message="Document import started",
+                message=f"Document import started with {parse_mode}",
             )
         )
 
@@ -42,7 +45,7 @@ class ImportService:
             temp_path.write_bytes(await file.read())
             if hasattr(self.store, "minio"):
                 self.store.minio.upload_file(f"documents/{task_id}/{original_name}", temp_path)
-            response = run_import(temp_path, self.store, self.settings, document_id=task_id)
+            response = run_import(temp_path, self.store, self.settings, document_id=task_id, parse_mode=parse_mode)
             task_message = response.message
             response.task = self.store.update_task(
                 task_id,
@@ -51,6 +54,7 @@ class ImportService:
                 message=task_message,
                 trace=response.trace,
                 document_id=response.document.document_id,
+                parse_mode=parse_mode,
             )
             return response
         except Exception as exc:
@@ -81,6 +85,7 @@ RS-12 数字万用表支持直流电压、交流电压、电阻和通断测量�
             ImportTaskRecord(
                 task_id=task_id,
                 file_name=sample_path.name,
+                parse_mode="pypdf",
                 status="processing",
                 progress=10,
                 message="Demo import started",
@@ -96,5 +101,14 @@ RS-12 数字万用表支持直流电压、交流电压、电阻和通断测量�
             message="Demo document imported successfully",
             trace=response.trace,
             document_id=response.document.document_id,
+            parse_mode="pypdf",
         )
         return response
+
+    def _normalize_parse_mode(self, parse_mode: str) -> str:
+        mode = (parse_mode or "pypdf").strip().lower()
+        if mode == "minneru":
+            mode = "mineru"
+        if mode not in self.supported_parse_modes:
+            raise HTTPException(status_code=400, detail="parse_mode must be one of: pypdf, mineru, auto.")
+        return mode

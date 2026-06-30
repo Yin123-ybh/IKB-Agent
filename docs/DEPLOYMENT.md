@@ -73,6 +73,15 @@ MINERU_TABLE=true
 - 文本型 PDF 可以把 `MINERU_METHOD=txt` 改快一些；扫描件或复杂图片 PDF 建议继续用 `auto` 或 `ocr`。
 - 执行时终端会输出 `[MinerU] ...` 实时日志，并在文档处理目录生成 `mineru.log`，方便判断慢在下载模型、OCR 还是表格识别。
 
+前端上传时也可以为单个文件选择解析模式。接口参数为 multipart form 字段：
+
+```bash
+curl -F "file=@demo.pdf" -F "parse_mode=pypdf" http://127.0.0.1:8000/api/import
+curl -F "file=@demo.pdf" -F "parse_mode=mineru" http://127.0.0.1:8000/api/import
+```
+
+这个单次参数优先级高于 `.env` 中的 `PDF_PARSE_BACKEND`，因此可以在同一个服务里分别测试轻量版和 MinerU 版。
+
 检查 MinerU 是否就绪：
 
 ```bash

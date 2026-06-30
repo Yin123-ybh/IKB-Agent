@@ -31,6 +31,7 @@ class DocumentRecord(BaseModel):
 class ImportTaskRecord(BaseModel):
     task_id: str
     file_name: str
+    parse_mode: str = "pypdf"
     status: str = "pending"
     progress: int = Field(default=0, ge=0, le=100)
     message: str = ""

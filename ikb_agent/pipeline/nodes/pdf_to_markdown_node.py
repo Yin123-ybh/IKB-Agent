@@ -26,14 +26,15 @@ class PdfToMarkdownNode(BasePipelineNode):
         output_dir.mkdir(parents=True, exist_ok=True)
         md_path = output_dir / f"{pdf_path.stem}.md"
         warnings = state.setdefault("warnings", [])
+        parse_mode = self._normalize_parse_mode(state.get("parse_mode", self.settings.pdf_parse_backend))
 
-        if self.settings.pdf_parse_backend in {"mineru", "auto"}:
+        if parse_mode in {"mineru", "auto"}:
             mineru_md = self._parse_with_mineru(pdf_path, output_dir, warnings)
             if mineru_md:
                 state["md_path"] = str(mineru_md)
                 state["is_md_read_enabled"] = True
                 return state
-            if self.settings.pdf_parse_backend == "mineru":
+            if parse_mode == "mineru":
                 raise RuntimeError("MinerU parsing failed. Check MINERU_CLI, Python version, and model configuration.")
 
         pages: list[str] = []
@@ -113,6 +114,17 @@ class PdfToMarkdownNode(BasePipelineNode):
                 last_error = self._compact_error(output)
         warnings.append(f"MinerU parsing failed: {last_error}")
         return None
+
+    @staticmethod
+    def _normalize_parse_mode(value: str | None) -> str:
+        mode = (value or "pypdf").strip().lower()
+        aliases = {
+            "light": "pypdf",
+            "fast": "pypdf",
+            "local": "pypdf",
+            "minneru": "mineru",
+        }
+        return aliases.get(mode, mode if mode in {"pypdf", "mineru", "auto"} else "pypdf")
 
     @staticmethod
     def _run_mineru(command: list[str], log_path: Path) -> tuple[int, str]:

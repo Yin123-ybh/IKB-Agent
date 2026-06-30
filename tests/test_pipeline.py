@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from ikb_agent.pipeline.nodes import DocumentSplitNode, ItemNameRecognitionNode
+from ikb_agent.pipeline.nodes import DocumentSplitNode, ItemNameRecognitionNode, PdfToMarkdownNode
 from ikb_agent.settings import Settings
 from ikb_agent.storage import JsonKnowledgeStore
 from ikb_agent.models import ChunkRecord, DocumentRecord, ImportTaskRecord, QueryRequest
@@ -50,6 +50,58 @@ def test_store_tracks_import_tasks(tmp_path: Path):
     assert completed.status == "completed"
     assert completed.progress == 100
     assert store.get_task("task-1").trace == ["entry_node"]
+
+
+def test_pdf_parse_mode_pypdf_skips_mineru_even_when_default_is_mineru(tmp_path: Path, monkeypatch):
+    settings = Settings(data_dir=tmp_path, pdf_parse_backend="mineru")
+    node = PdfToMarkdownNode(settings)
+    pdf_path = tmp_path / "demo.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4\n%%EOF")
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("MinerU should not be called when parse_mode is pypdf")
+
+    monkeypatch.setattr(node, "_parse_with_mineru", fail_if_called)
+
+    result = node(
+        {
+            "pdf_path": str(pdf_path),
+            "file_dir": str(tmp_path / "processed"),
+            "document_id": "doc-pypdf",
+            "parse_mode": "pypdf",
+            "warnings": [],
+        }
+    )
+
+    assert Path(result["md_path"]).exists()
+    assert result["is_md_read_enabled"] is True
+
+
+def test_pdf_parse_mode_mineru_overrides_pypdf_default(tmp_path: Path, monkeypatch):
+    settings = Settings(data_dir=tmp_path, pdf_parse_backend="pypdf")
+    node = PdfToMarkdownNode(settings)
+    pdf_path = tmp_path / "demo.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4\n%%EOF")
+    mineru_md = tmp_path / "mineru.md"
+    mineru_md.write_text("# MinerU result", encoding="utf-8")
+
+    def fake_mineru(*args, **kwargs):
+        return mineru_md
+
+    monkeypatch.setattr(node, "_parse_with_mineru", fake_mineru)
+
+    result = node(
+        {
+            "pdf_path": str(pdf_path),
+            "file_dir": str(tmp_path / "processed"),
+            "document_id": "doc-mineru",
+            "parse_mode": "minneru",
+            "warnings": [],
+        }
+    )
+
+    assert result["md_path"] == str(mineru_md)
+    assert result["is_md_read_enabled"] is True
 
 
 def test_query_auto_item_name_does_not_hard_filter_results(tmp_path: Path):

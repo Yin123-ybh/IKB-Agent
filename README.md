@@ -92,8 +92,13 @@ curl http://127.0.0.1:8000/api/health
 ### 导入文档
 
 ```bash
-curl -F "file=@demo.md" http://127.0.0.1:8000/api/import
+curl -F "file=@demo.pdf" -F "parse_mode=pypdf" http://127.0.0.1:8000/api/import
 ```
+
+`parse_mode` 支持：
+
+- `pypdf`：轻量文本抽取，速度快，适合本地演示和文本型 PDF。
+- `mineru`：调用 MinerU 解析，支持复杂版式、表格、图片和 OCR，耗时更长。
 
 ### 查询导入任务
 
