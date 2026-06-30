@@ -25,7 +25,7 @@
 | 流程编排 | LangGraph |
 | PDF 解析 | pypdf, MinerU |
 | 大模型 | DashScope / OpenAI-compatible API, Qwen 系列模型 |
-| 向量检索 | 本地 Dense/Sparse, Milvus |
+| 向量检索 | BGE-M3 / 本地 Dense-Sparse, Milvus |
 | 对象存储 | MinIO |
 | 任务记录 | JSON, MongoDB |
 | 前端 | HTML, CSS, JavaScript |
@@ -167,6 +167,45 @@ VL_MODEL=qwen3-vl-flash
 ```
 
 不要把真实密钥提交到 GitHub，`.env` 文件已被忽略。
+
+## BGE-M3 向量模型
+
+默认配置是：
+
+```env
+EMBEDDING_MODEL=local-hash
+```
+
+这个模式启动快，适合本地演示。若要使用真实 BGE-M3 生成向量，建议在 Python 3.12 环境安装：
+
+```bash
+source .venv312/bin/activate
+pip install -e ".[bge]"
+```
+
+然后修改 `.env`：
+
+```env
+EMBEDDING_MODEL=bge-m3
+EMBEDDING_DIM=1024
+BGE_M3=BAAI/bge-m3
+BGE_M3_PATH=
+BGE_DEVICE=cpu
+BGE_FP16=false
+```
+
+如果你已经把模型下载到本地，可以填写：
+
+```env
+BGE_M3_PATH=/你的本地模型路径/bge-m3
+```
+
+说明：
+
+- BGE-M3 会同时生成 `dense_vector` 和 `sparse_vector`。
+- `dense_vector` 用于语义检索，`sparse_vector` 用于关键词匹配。
+- 首次使用可能需要下载模型，CPU 推理会比本地模拟向量慢。
+- 如果使用 Milvus，请保持 `EMBEDDING_DIM=1024`，并在切换向量维度或模型后清空旧 collection 后重新导入文档。
 
 ## API 示例
 

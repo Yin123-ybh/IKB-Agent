@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import re
 from collections import Counter
+from collections.abc import Mapping, Sequence
 
 _LATIN_TOKEN_RE = re.compile(r"[a-zA-Z]+[a-zA-Z0-9+\-]*|\d+[a-zA-Z0-9+\-]*")
 _CJK_RE = re.compile(r"[\u4e00-\u9fff]")
@@ -38,15 +39,34 @@ def sparse_vectorize(text: str) -> dict[str, float]:
     return {token: count / total for token, count in counts.items()}
 
 
-def cosine(left: dict[str, float], right: dict[str, float]) -> float:
+def cosine(left, right) -> float:
     if not left or not right:
+        return 0.0
+    if _is_numeric_sequence(left) and _is_numeric_sequence(right):
+        return _cosine_sequence(left, right)
+    if _is_numeric_sequence(left) or _is_numeric_sequence(right):
         return 0.0
     if len(left) > len(right):
         left, right = right, left
     return sum(value * right.get(token, 0.0) for token, value in left.items())
 
 
-def sparse_overlap(left: dict[str, float], right: dict[str, float]) -> float:
+def _is_numeric_sequence(value) -> bool:
+    return isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray))
+
+
+def _cosine_sequence(left: Sequence[float], right: Sequence[float]) -> float:
+    size = min(len(left), len(right))
+    if size == 0:
+        return 0.0
+    dot = sum(float(left[index]) * float(right[index]) for index in range(size))
+    left_norm = math.sqrt(sum(float(value) * float(value) for value in left))
+    right_norm = math.sqrt(sum(float(value) * float(value) for value in right))
+    denominator = left_norm * right_norm
+    return dot / denominator if denominator else 0.0
+
+
+def sparse_overlap(left: Mapping[str, float], right: Mapping[str, float]) -> float:
     if not left or not right:
         return 0.0
     shared = set(left) & set(right)

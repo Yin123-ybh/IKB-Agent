@@ -1,4 +1,5 @@
 from pathlib import Path
+from types import ModuleType
 
 from ikb_agent.pipeline.nodes import DocumentSplitNode, ItemNameRecognitionNode, PdfToMarkdownNode
 from ikb_agent.settings import Settings
@@ -6,6 +7,7 @@ from ikb_agent.storage import JsonKnowledgeStore
 from ikb_agent.models import ChunkRecord, DocumentRecord, ImportTaskRecord, QueryRequest
 from ikb_agent.services.query_service import QueryService
 from ikb_agent.text_utils import sparse_vectorize, vectorize
+from ikb_agent.utils import embedding_utils
 
 
 def test_document_split_keeps_heading_context(tmp_path: Path):
@@ -102,6 +104,31 @@ def test_pdf_parse_mode_mineru_overrides_pypdf_default(tmp_path: Path, monkeypat
 
     assert result["md_path"] == str(mineru_md)
     assert result["is_md_read_enabled"] is True
+
+
+def test_bge_m3_embedding_client_parses_dense_and_sparse(monkeypatch):
+    class FakeBgeM3FlagModel:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def encode(self, texts, **kwargs):
+            return {
+                "dense_vecs": [[0.1, 0.2], [0.3, 0.4]],
+                "lexical_weights": [{"101": 0.7}, {"202": 0.9}],
+            }
+
+    fake_module = ModuleType("FlagEmbedding")
+    fake_module.BGEM3FlagModel = FakeBgeM3FlagModel
+    monkeypatch.setitem(__import__("sys").modules, "FlagEmbedding", fake_module)
+    embedding_utils._get_cached_bge_client.cache_clear()
+
+    client = embedding_utils.get_embedding_client(Settings(embedding_model="bge-m3", bge_device="cpu"))
+    results = client.embed_documents(["hello", "world"])
+
+    assert results[0].dense_vector == [0.1, 0.2]
+    assert results[0].sparse_vector == {"101": 0.7}
+    assert results[1].dense_vector == [0.3, 0.4]
+    assert results[1].sparse_vector == {"202": 0.9}
 
 
 def test_query_auto_item_name_does_not_hard_filter_results(tmp_path: Path):

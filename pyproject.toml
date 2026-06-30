@@ -19,6 +19,7 @@ dependencies = [
 [project.optional-dependencies]
 pdf = ["pypdf>=4.2.0"]
 mineru = ["mineru[all]>=2.0.0; python_version < '3.14'"]
+bge = ["FlagEmbedding>=1.3.0; python_version < '3.14'"]
 middleware = [
   "pymilvus>=2.5.0",
   "minio>=7.2.0",

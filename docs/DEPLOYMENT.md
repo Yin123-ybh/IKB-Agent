@@ -88,6 +88,28 @@ curl -F "file=@demo.pdf" -F "parse_mode=mineru" http://127.0.0.1:8000/api/import
 python scripts/check_mineru.py
 ```
 
+### 启用真实 BGE-M3 向量
+
+默认 `EMBEDDING_MODEL=local-hash` 是本地轻量模拟向量。若需要课件中的真实 BGE-M3：
+
+```bash
+source .venv312/bin/activate
+pip install -e ".[bge]"
+```
+
+然后在 `.env` 中配置：
+
+```env
+EMBEDDING_MODEL=bge-m3
+EMBEDDING_DIM=1024
+BGE_M3=BAAI/bge-m3
+BGE_M3_PATH=
+BGE_DEVICE=cpu
+BGE_FP16=false
+```
+
+如果你本地已经有 BGE-M3 模型目录，优先填写 `BGE_M3_PATH`，可以避免每次从远程仓库解析模型。切换模型后，建议重新导入文档；如果使用 Milvus 且 collection 已存在，必要时先删除旧 collection，避免旧向量和新向量混用。
+
 如果 MinerU CLI 名称是旧版 `magic-pdf`，改成：
 
 ```env

@@ -5,6 +5,9 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+DenseVector = dict[str, float] | list[float]
+SparseVector = dict[str, float]
+
 
 class ChunkRecord(BaseModel):
     chunk_id: str
@@ -14,8 +17,8 @@ class ChunkRecord(BaseModel):
     parent_title: str
     file_title: str
     item_name: str
-    dense_vector: dict[str, float] = Field(default_factory=dict)
-    sparse_vector: dict[str, float] = Field(default_factory=dict)
+    dense_vector: DenseVector = Field(default_factory=dict)
+    sparse_vector: SparseVector = Field(default_factory=dict)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 

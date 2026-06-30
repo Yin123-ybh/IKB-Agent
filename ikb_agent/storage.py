@@ -8,8 +8,8 @@ from datetime import datetime
 
 from .models import ChunkRecord, DocumentRecord, ImportTaskRecord, SearchHit
 from .settings import Settings
-from .text_utils import cosine, sparse_overlap, sparse_vectorize, vectorize
-from .utils.embedding_utils import dense_dict_to_list
+from .text_utils import cosine, sparse_overlap
+from .utils.embedding_utils import dense_dict_to_list, get_embedding_client
 from .utils.milvus_utils import MilvusVectorStore
 from .utils.minio_utils import MinioResourceStore
 from .utils.mongo_history_utils import MongoHistoryStore
@@ -91,8 +91,9 @@ class JsonKnowledgeStore:
         return [ChunkRecord(**item) for item in data["chunks"]]
 
     def search(self, query: str, top_k: int = 5, item_names: list[str] | None = None) -> list[SearchHit]:
-        query_dense = vectorize(query)
-        query_sparse = sparse_vectorize(query)
+        query_embedding = get_embedding_client().embed_query(query)
+        query_dense = query_embedding.dense_vector
+        query_sparse = query_embedding.sparse_vector
         filters = {name.strip().lower() for name in item_names or [] if name.strip()}
         hits: list[SearchHit] = []
 
@@ -173,7 +174,8 @@ class HybridKnowledgeStore:
             escaped = ", ".join(repr(name) for name in filters)
             expr = f"item_name in [{escaped}]"
 
-        query_vector = dense_dict_to_list(vectorize(query), self.settings.embedding_dim)
+        query_embedding = get_embedding_client(self.settings).embed_query(query)
+        query_vector = dense_dict_to_list(query_embedding.dense_vector, self.settings.embedding_dim)
         rows = self.milvus.client.search(
             collection_name=self.settings.chunks_collection,
             data=[query_vector],
