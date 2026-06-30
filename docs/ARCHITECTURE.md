@@ -3,6 +3,9 @@
 ## Import Pipeline
 
 IKB-Agent uses LangGraph to keep the import pipeline observable and extensible.
+Nodes are split into independent modules under `ikb_agent/pipeline/nodes`,
+matching the original course structure where each node owns a single business
+step.
 
 ```mermaid
 flowchart LR

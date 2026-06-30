@@ -103,15 +103,32 @@ curl -X POST http://127.0.0.1:8000/api/query \
 ```text
 IKB-Agent/
 ├── ikb_agent/
-│   ├── main.py                  # FastAPI 入口
+│   ├── main.py                  # FastAPI 应用装配
+│   ├── api/                     # API 路由层
+│   │   ├── import_router.py
+│   │   ├── query_router.py
+│   │   └── system_router.py
+│   ├── services/                # 业务服务层
+│   │   ├── import_service.py
+│   │   ├── query_service.py
+│   │   └── task_service.py
+│   ├── core/deps.py             # 依赖注入
+│   ├── pipeline/
+│   │   ├── import_pipeline.py   # LangGraph 导入图
+│   │   ├── nodes/               # 导入节点，每个节点独立文件
+│   │   │   ├── entry_node.py
+│   │   │   ├── pdf_to_markdown_node.py
+│   │   │   ├── markdown_image_node.py
+│   │   │   ├── document_split_node.py
+│   │   │   ├── item_name_recognition_node.py
+│   │   │   ├── embedding_node.py
+│   │   │   └── import_store_node.py
+│   │   └── state.py             # 图状态定义
+│   ├── processor/               # 对齐课件命名的兼容入口
 │   ├── models.py                # Pydantic 数据模型
 │   ├── settings.py              # 配置管理
 │   ├── storage.py               # 本地知识库，可替换 Milvus
 │   ├── text_utils.py            # 分词、向量化、商品名启发式识别
-│   ├── pipeline/
-│   │   ├── import_pipeline.py   # LangGraph 导入图
-│   │   ├── nodes.py             # 导入节点
-│   │   └── state.py             # 图状态定义
 │   └── static/                  # 前端演示页面
 ├── tests/
 ├── .github/workflows/ci.yml
