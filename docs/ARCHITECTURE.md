@@ -60,3 +60,33 @@ score = 0.64 * dense_cosine + 0.36 * sparse_overlap
 ```
 
 Production systems can replace this with Milvus hybrid search and BGE-M3 vectors while keeping the same chunk schema.
+
+## Project Layers
+
+```text
+ikb_agent/
+  api/          FastAPI routers: import, query, health, tasks
+  services/     Business orchestration for import/query/task APIs
+  schema/       Request and response schemas exposed to the API layer
+  pipeline/     LangGraph import workflow and node implementations
+  processor/    Courseware-compatible graph entry package
+  utils/        Optional integrations: Milvus, MinIO, MongoDB, LLM, SSE
+  static/       Interview demo frontend
+```
+
+The default local mode keeps all data in `data/knowledge_store.json`. The
+production-oriented utilities are intentionally separate from the local store,
+so a developer can test the whole document-processing flow before installing
+Docker or GPU-heavy model dependencies.
+
+## Middleware Mapping
+
+| Responsibility | Local mode | Production mode |
+| --- | --- | --- |
+| Original files and images | `data/uploads` | MinIO |
+| Chunk records | JSON store | Milvus scalar fields + metadata |
+| Dense vectors | local hash vector | BGE-M3 dense vector in Milvus |
+| Sparse vectors | token overlap map | BGE-M3 sparse vector / hybrid retrieval |
+| Task trace and chat history | JSON store | MongoDB |
+| Image understanding | Markdown alt text fallback | Qwen3-VL-Flash |
+| Product/entity extraction | heuristic recognizer | Qwen LLM extraction |

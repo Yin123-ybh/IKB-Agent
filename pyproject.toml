@@ -14,6 +14,11 @@ dependencies = [
 
 [project.optional-dependencies]
 pdf = ["pypdf>=4.2.0"]
+middleware = [
+  "pymilvus>=2.5.0",
+  "minio>=7.2.0",
+  "pymongo>=4.6.0",
+]
 dev = ["pytest>=8.2.0"]
 
 [tool.pytest.ini_options]

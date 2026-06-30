@@ -69,6 +69,8 @@ http://127.0.0.1:8000
 RS-12 如何测量直流电压？
 ```
 
+更完整的 PyCharm 启动、中间件部署和连接测试见 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。
+
 ## API
 
 ### 健康检查
@@ -163,13 +165,20 @@ IKB-Agent/
 
 ## 可选中间件
 
-本地演示不强制依赖中间件。如果你想展示生产部署形态，可以启动：
+本地演示不强制依赖中间件。如果你想展示课件中的生产部署形态，可以启动：
 
 ```bash
 docker compose up -d
 ```
 
-包括 Milvus、Etcd、MinIO、Attu 和 MongoDB。当前代码默认使用本地 JSON store；你可以在 `storage.py` 基础上扩展 Milvus 实现。
+包括 Milvus、Etcd、MinIO、Attu 和 MongoDB。当前代码默认使用本地 JSON store；`ikb_agent/utils/milvus_utils.py`、`ikb_agent/utils/minio_utils.py`、`ikb_agent/utils/mongo_history_utils.py` 已经预留生产中间件接入工具。
+
+安装可选中间件依赖并检查连接：
+
+```bash
+pip install -e ".[middleware]"
+python scripts/test_connections.py
+```
 
 ## 测试
 
