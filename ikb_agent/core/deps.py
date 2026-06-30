@@ -21,7 +21,7 @@ def get_import_service() -> ImportService:
 
 
 def get_query_service() -> QueryService:
-    return QueryService(get_store())
+    return QueryService(get_store(), get_settings())
 
 
 def get_task_service() -> TaskService:
