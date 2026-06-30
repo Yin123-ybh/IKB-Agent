@@ -110,6 +110,21 @@ BGE_FP16=false
 
 如果你本地已经有 BGE-M3 模型目录，优先填写 `BGE_M3_PATH`，可以避免每次从远程仓库解析模型。切换模型后，建议重新导入文档；如果使用 Milvus 且 collection 已存在，必要时先删除旧 collection，避免旧向量和新向量混用。
 
+如果 HuggingFace 下载卡住，可以改用 ModelScope 国内源下载：
+
+```bash
+source .venv312/bin/activate
+python scripts/download_bge_m3.py
+```
+
+脚本执行完成后会输出：
+
+```env
+BGE_M3_PATH=/path/to/downloaded/bge-m3
+```
+
+将这行写入 `.env`，重启后端后项目会直接从本地路径加载 BGE-M3。
+
 如果 MinerU CLI 名称是旧版 `magic-pdf`，改成：
 
 ```env

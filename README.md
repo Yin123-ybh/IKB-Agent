@@ -200,6 +200,21 @@ BGE_FP16=false
 BGE_M3_PATH=/你的本地模型路径/bge-m3
 ```
 
+如果 HuggingFace 下载速度慢，可以用 ModelScope 国内源提前下载：
+
+```bash
+source .venv312/bin/activate
+python scripts/download_bge_m3.py
+```
+
+脚本会输出类似：
+
+```env
+BGE_M3_PATH=/path/to/downloaded/bge-m3
+```
+
+把输出的 `BGE_M3_PATH` 填入 `.env` 后重启后端即可。
+
 说明：
 
 - BGE-M3 会同时生成 `dense_vector` 和 `sparse_vector`。
