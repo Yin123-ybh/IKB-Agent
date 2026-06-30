@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import shutil
+import shlex
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from .base import BasePipelineNode
@@ -89,26 +91,59 @@ class PdfToMarkdownNode(BasePipelineNode):
             "--image-analysis",
             str(self.settings.mineru_image_analysis).lower(),
         ]
+        if self.settings.mineru_source and self._cli_supports(command, "--source"):
+            base_command.extend(["--source", self.settings.mineru_source])
+        if self.settings.mineru_extra_args:
+            base_command.extend(shlex.split(self.settings.mineru_extra_args))
+
         candidates = [
             base_command,
             [command, "-p", str(pdf_path), "-o", str(mineru_output_dir)],
         ]
         last_error = ""
+        log_path = output_dir / "mineru.log"
         for candidate in candidates:
-            try:
-                result = subprocess.run(candidate, capture_output=True, text=True, timeout=900, check=False)
-            except Exception as exc:
-                last_error = str(exc)
-                continue
-            if result.returncode == 0:
+            return_code, output = self._run_mineru(candidate, log_path)
+            if return_code == 0:
                 md_path = self._find_mineru_markdown(mineru_output_dir, pdf_path.stem)
                 if md_path:
                     return md_path
                 last_error = "MinerU completed but no Markdown file was found."
             else:
-                last_error = self._compact_error(result.stderr or result.stdout or "")
+                last_error = self._compact_error(output)
         warnings.append(f"MinerU parsing failed: {last_error}")
         return None
+
+    @staticmethod
+    def _run_mineru(command: list[str], log_path: Path) -> tuple[int, str]:
+        start_time = time.time()
+        output_lines: list[str] = []
+        print(f"[MinerU] command: {shlex.join(command)}")
+        try:
+            with log_path.open("a", encoding="utf-8") as log_file:
+                log_file.write(f"\n[MinerU] command: {shlex.join(command)}\n")
+                process = subprocess.Popen(
+                    command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    bufsize=1,
+                )
+                assert process.stdout is not None
+                for line in process.stdout:
+                    output_lines.append(line)
+                    log_file.write(line)
+                    log_file.flush()
+                    print(f"[MinerU] {line.rstrip()}")
+                return_code = process.wait(timeout=900)
+                elapsed = time.time() - start_time
+                log_file.write(f"[MinerU] exit={return_code}, elapsed={elapsed:.2f}s\n")
+                print(f"[MinerU] exit={return_code}, elapsed={elapsed:.2f}s")
+                return return_code, "".join(output_lines)
+        except Exception as exc:
+            return 1, str(exc)
 
     @staticmethod
     def _find_mineru_markdown(output_dir: Path, pdf_stem: str) -> Path | None:
@@ -122,6 +157,14 @@ class PdfToMarkdownNode(BasePipelineNode):
             return command
         sibling = Path(sys.executable).parent / name
         return str(sibling) if sibling.exists() else None
+
+    @staticmethod
+    def _cli_supports(command: str, option: str) -> bool:
+        try:
+            result = subprocess.run([command, "--help"], capture_output=True, text=True, timeout=20, check=False)
+        except Exception:
+            return False
+        return option in f"{result.stdout}\n{result.stderr}"
 
     @staticmethod
     def _compact_error(output: str) -> str:

@@ -59,9 +59,19 @@ PDF_PARSE_BACKEND=mineru
 MINERU_CLI=mineru
 MINERU_METHOD=auto
 MINERU_BACKEND=pipeline
+MINERU_SOURCE=local
 MINERU_FORMULA=false
 MINERU_TABLE=true
 ```
+
+课件第四章的命令是 `mineru -p <pdf_path> -o <output_dir> --source local`，核心目的是使用本地模型，避免每次解析都重新下载。新版 MinerU 3.x 的命令帮助里可能已经没有 `--source` 参数，本项目会自动检测：支持时才传 `--source local`，不支持时跳过，避免命令失败。
+
+速度说明：
+
+- `PDF_PARSE_BACKEND=pypdf` 是轻量文本抽取，所以同一个 PDF 会很快，但表格、图片、复杂版式还原能力弱。
+- `PDF_PARSE_BACKEND=mineru` 会加载版面分析、OCR、表格等模型，第一次运行还可能下载模型，因此明显更慢。
+- 文本型 PDF 可以把 `MINERU_METHOD=txt` 改快一些；扫描件或复杂图片 PDF 建议继续用 `auto` 或 `ocr`。
+- 执行时终端会输出 `[MinerU] ...` 实时日志，并在文档处理目录生成 `mineru.log`，方便判断慢在下载模型、OCR 还是表格识别。
 
 检查 MinerU 是否就绪：
 
