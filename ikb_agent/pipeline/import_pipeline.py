@@ -79,10 +79,13 @@ def run_import(
         "file_dir": str(settings.data_dir / "processed"),
     }
     result = app.invoke(state)
+    warnings = result.get("warnings", [])
+    message = "Document imported successfully"
+    if warnings:
+        message = "Document imported with warnings: " + " ".join(warnings)
     return ImportResponse(
-        message="Document imported successfully",
+        message=message,
         document=DocumentRecord(**result["document"]),
         chunks=[ChunkRecord(**chunk) for chunk in result["chunk_records"]],
         trace=result.get("trace", []),
     )
-

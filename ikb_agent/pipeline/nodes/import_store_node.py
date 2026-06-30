@@ -24,6 +24,7 @@ class ImportStoreNode(BasePipelineNode):
 
     def process(self, state: ImportState) -> ImportState:
         chunks: list[ChunkRecord] = []
+        warnings = state.get("warnings", [])
         for chunk in state.get("chunks", []):
             chunk_id = f"{state['document_id']}-{chunk['chunk_index']:04d}"
             chunks.append(
@@ -37,7 +38,7 @@ class ImportStoreNode(BasePipelineNode):
                     item_name=chunk["item_name"],
                     dense_vector=chunk["dense_vector"],
                     sparse_vector=chunk["sparse_vector"],
-                    metadata={"chunk_index": chunk["chunk_index"]},
+                    metadata={"chunk_index": chunk["chunk_index"], "warnings": warnings},
                 )
             )
 
@@ -52,4 +53,3 @@ class ImportStoreNode(BasePipelineNode):
         state["document"] = document.model_dump()
         state["chunk_records"] = [chunk.model_dump() for chunk in chunks]
         return state
-

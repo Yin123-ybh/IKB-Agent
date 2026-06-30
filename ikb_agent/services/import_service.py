@@ -41,11 +41,12 @@ class ImportService:
             temp_path = temp_dir / original_name
             temp_path.write_bytes(await file.read())
             response = run_import(temp_path, self.store, self.settings, document_id=task_id)
+            task_message = response.message
             response.task = self.store.update_task(
                 task_id,
                 status="completed",
                 progress=100,
-                message="Document imported successfully",
+                message=task_message,
                 trace=response.trace,
                 document_id=response.document.document_id,
             )
@@ -93,4 +94,3 @@ RS-12 数字万用表支持直流电压、交流电压、电阻和通断测量�
             document_id=response.document.document_id,
         )
         return response
-

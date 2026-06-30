@@ -12,20 +12,22 @@ class QueryService:
         self.store = store
 
     def query(self, request: QueryRequest) -> QueryResponse:
-        item_names = request.item_names
-        if not item_names:
+        explicit_item_names = [name for name in request.item_names if name.strip()]
+        inferred_item_names: list[str] = []
+        if not explicit_item_names:
             inferred = guess_item_name("", request.query)
-            item_names = [] if inferred == "未知商品" else [inferred]
+            inferred_item_names = [] if inferred == "未知商品" else [inferred]
 
-        hits = self.store.search(request.query, top_k=request.top_k, item_names=item_names)
-        if not hits and item_names:
-            hits = self.store.search(request.query, top_k=request.top_k, item_names=[])
+        # Only an explicit item filter from the API should narrow the corpus.
+        # Auto-inferred names are useful metadata, but using them as a hard
+        # filter makes the demo look broken after importing unrelated PDFs.
+        hits = self.store.search(request.query, top_k=request.top_k, item_names=explicit_item_names)
 
         return QueryResponse(
             answer=self._build_answer(request.query, hits),
             hits=hits,
             rewritten_query=request.query.strip(),
-            item_names=item_names,
+            item_names=explicit_item_names or inferred_item_names,
         )
 
     @staticmethod
@@ -45,4 +47,3 @@ class QueryService:
             f"核心依据：{evidence}\n\n"
             "召回来源：\n" + "\n".join(bullet_lines)
         )
-

@@ -22,6 +22,7 @@ class PdfToMarkdownNode(BasePipelineNode):
         md_path = output_dir / f"{pdf_path.stem}.md"
 
         pages: list[str] = []
+        warnings = state.setdefault("warnings", [])
         try:
             from pypdf import PdfReader
 
@@ -30,18 +31,21 @@ class PdfToMarkdownNode(BasePipelineNode):
                 text = page.extract_text() or ""
                 if text.strip():
                     pages.append(f"## Page {index}\n\n{text.strip()}")
-        except Exception:
+        except ImportError:
+            warnings.append("PDF text extraction skipped: install pypdf with `pip install -e '.[pdf]'`.")
+        except Exception as exc:
+            warnings.append(f"PDF text extraction failed: {exc}")
             pages = []
 
         if not pages:
+            warnings.append("No readable PDF text was extracted. The document was stored with a parsing notice only.")
             pages.append(
                 "## PDF Parsing Notice\n\n"
-                "The local demo could not extract text from this PDF. "
-                "In production, configure MinerU to recover headings, tables, and images."
+                "本地演示模式没有从这个 PDF 中抽取到可检索正文。"
+                "请先安装 pypdf 后重新导入；如果这是扫描版或复杂版式 PDF，生产环境需要接入 MinerU 解析正文、表格和图片。"
             )
 
         md_path.write_text(f"# {pdf_path.stem}\n\n" + "\n\n".join(pages), encoding="utf-8")
         state["md_path"] = str(md_path)
         state["is_md_read_enabled"] = True
         return state
-

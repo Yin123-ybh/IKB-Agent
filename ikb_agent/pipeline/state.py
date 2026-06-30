@@ -17,5 +17,6 @@ class ImportState(TypedDict, total=False):
     md_content: str
     chunks: list[dict[str, Any]]
     item_name: str
+    warnings: list[str]
     document: dict[str, Any]
     chunk_records: list[dict[str, Any]]

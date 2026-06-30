@@ -3,7 +3,9 @@ from pathlib import Path
 from ikb_agent.pipeline.nodes import DocumentSplitNode, ItemNameRecognitionNode
 from ikb_agent.settings import Settings
 from ikb_agent.storage import JsonKnowledgeStore
-from ikb_agent.models import ImportTaskRecord
+from ikb_agent.models import ChunkRecord, DocumentRecord, ImportTaskRecord, QueryRequest
+from ikb_agent.services.query_service import QueryService
+from ikb_agent.text_utils import sparse_vectorize, vectorize
 
 
 def test_document_split_keeps_heading_context(tmp_path: Path):
@@ -17,7 +19,7 @@ def test_document_split_keeps_heading_context(tmp_path: Path):
     result = node(state)
 
     assert result["chunks"]
-    assert any("直流电压测量" in chunk["content"] for chunk in result["chunks"])
+    assert any("旋钮拨到 V= 档" in chunk["content"] for chunk in result["chunks"])
     assert all(chunk["title"] for chunk in result["chunks"])
 
 
@@ -48,3 +50,54 @@ def test_store_tracks_import_tasks(tmp_path: Path):
     assert completed.status == "completed"
     assert completed.progress == 100
     assert store.get_task("task-1").trace == ["entry_node"]
+
+
+def test_query_auto_item_name_does_not_hard_filter_results(tmp_path: Path):
+    store = JsonKnowledgeStore(tmp_path / "store.json")
+    docs = [
+        DocumentRecord(
+            document_id="rs",
+            file_name="rs.md",
+            file_title="RS-12数字万用表",
+            item_name="RS-12",
+            chunk_count=1,
+        ),
+        DocumentRecord(
+            document_id="java",
+            file_name="java.md",
+            file_title="Java并发编程的艺术",
+            item_name="Java并发编程的艺术",
+            chunk_count=1,
+        ),
+    ]
+    chunks = [
+        ChunkRecord(
+            chunk_id="rs-1",
+            document_id="rs",
+            title="RS-12",
+            parent_title="RS-12",
+            file_title="RS-12数字万用表",
+            item_name="RS-12",
+            content="RS-12 数字万用表用于直流电压测量。",
+            dense_vector=vectorize("RS-12 数字万用表用于直流电压测量。"),
+            sparse_vector=sparse_vectorize("RS-12 数字万用表用于直流电压测量。"),
+        ),
+        ChunkRecord(
+            chunk_id="java-1",
+            document_id="java",
+            title="volatile 原理",
+            parent_title="Java并发编程的艺术",
+            file_title="Java并发编程的艺术",
+            item_name="Java并发编程的艺术",
+            content="Java 并发编程中的 volatile 通过内存屏障保证可见性。",
+            dense_vector=vectorize("Java 并发编程中的 volatile 通过内存屏障保证可见性。"),
+            sparse_vector=sparse_vectorize("Java 并发编程中的 volatile 通过内存屏障保证可见性。"),
+        ),
+    ]
+    for doc in docs:
+        store.upsert_document(doc, [chunk for chunk in chunks if chunk.document_id == doc.document_id])
+
+    response = QueryService(store).query(QueryRequest(query="RS-12 和 Java volatile 都是什么？", top_k=2))
+
+    assert response.item_names == ["RS-12"]
+    assert {hit.document_id for hit in response.hits} == {"rs", "java"}

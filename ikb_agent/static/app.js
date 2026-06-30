@@ -76,9 +76,10 @@ uploadForm.addEventListener("submit", async (event) => {
   importResult.textContent = "正在执行导入链路...";
   try {
     const data = await api("/api/import", { method: "POST", body: form });
-    importResult.textContent = `导入成功：${data.document.file_title}
+    importResult.textContent = `${data.message.includes("warnings") ? "导入完成但有警告" : "导入成功"}：${data.document.file_title}
 商品名：${data.document.item_name}
 Chunk 数量：${data.document.chunk_count}
+提示：${data.message}
 执行链路：${data.trace.join(" -> ")}`;
     await loadDocuments();
     await loadTasks();
