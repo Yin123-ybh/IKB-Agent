@@ -9,88 +9,134 @@
   <body>
     <aside class="sidebar">
       <div class="brand">
-        <svg width="34" height="34" viewBox="0 0 34 34" role="img" aria-label="IKB-Agent">
-          <rect x="3" y="3" width="28" height="28" rx="7" fill="#1f6feb"></rect>
-          <path d="M10 22V11h3v11h-3Zm5.5 0V11h3v4.4l4-4.4h3.8l-4.7 5.1 5.1 5.9h-4l-4.2-5v5h-3Z" fill="white"></path>
-        </svg>
+        <div class="brand-mark" aria-hidden="true">IK</div>
         <div>
           <strong>IKB-Agent</strong>
           <span>RAG 文档处理平台</span>
         </div>
       </div>
-      <nav>
+
+      <nav class="nav-links" aria-label="主导航">
         <a href="#import">文档导入</a>
         <a href="#query">知识问答</a>
         <a href="#pipeline">处理链路</a>
+        <a href="#library">知识资产</a>
       </nav>
-      <div class="status" id="healthStatus">连接中...</div>
+
+      <div class="sidebar-footer">
+        <span class="label">服务状态</span>
+        <div class="status" id="healthStatus">连接中...</div>
+      </div>
     </aside>
 
-    <main>
-      <section class="topbar">
+    <main class="app">
+      <header class="topbar">
         <div>
+          <p class="eyebrow">Enterprise RAG Knowledge Pipeline</p>
           <h1>智能知识库系统</h1>
-          <p>PDF / Markdown 解析、语义切分、商品识别、混合检索与 RAG 问答演示。</p>
+          <p>文档解析、语义切分、商品识别、混合检索与 RAG 问答演示。</p>
         </div>
-        <button id="demoImportBtn">导入示例文档</button>
-      </section>
+        <button id="demoImportBtn" class="secondary-action" type="button">导入示例文档</button>
+      </header>
 
-      <section class="grid">
-        <div class="panel" id="import">
-          <div class="panel-head">
-            <h2>文档导入</h2>
-            <span>PDF / Markdown / TXT</span>
-          </div>
-          <form id="uploadForm" class="upload-box">
-            <input id="fileInput" type="file" accept=".pdf,.md,.markdown,.txt" />
-            <button type="submit">上传并入库</button>
-          </form>
-          <div id="importResult" class="result muted">等待上传文档。</div>
+      <section class="workspace" aria-label="知识库工作台">
+        <div class="column left-column">
+          <section class="panel" id="import">
+            <div class="panel-head">
+              <div>
+                <span class="label">Import</span>
+                <h2>文档导入</h2>
+              </div>
+              <span class="meta">PDF / Markdown / TXT</span>
+            </div>
+
+            <div class="mode-switch" role="radiogroup" aria-label="解析模式">
+              <label class="mode-card selected" data-mode-card="pypdf">
+                <input type="radio" name="parseMode" value="pypdf" checked />
+                <span class="mode-title">轻量版 pypdf</span>
+                <span class="mode-desc">速度快，适合文本型 PDF 和本地演示。</span>
+                <span class="mode-note">解析不够全面</span>
+              </label>
+              <label class="mode-card" data-mode-card="mineru">
+                <input type="radio" name="parseMode" value="mineru" />
+                <span class="mode-title">增强版 MinerU</span>
+                <span class="mode-desc">支持复杂版式、表格、图片和 OCR。</span>
+                <span class="mode-note">解析时间较长</span>
+              </label>
+            </div>
+
+            <form id="uploadForm" class="upload-box">
+              <label class="file-picker" for="fileInput">
+                <span class="file-main" id="fileName">选择一个知识文档</span>
+                <span class="file-sub">支持 .pdf / .md / .markdown / .txt</span>
+                <input id="fileInput" type="file" accept=".pdf,.md,.markdown,.txt" />
+              </label>
+              <button type="submit" class="primary-action">上传并入库</button>
+            </form>
+
+            <div id="importResult" class="result muted scroll-box">等待上传文档。</div>
+          </section>
+
+          <section class="panel compact-panel" id="pipeline">
+            <div class="panel-head">
+              <div>
+                <span class="label">LangGraph</span>
+                <h2>导入处理链路</h2>
+              </div>
+              <span class="meta">节点状态</span>
+            </div>
+            <div class="flow">
+              <div>Entry</div>
+              <div>PDF 转 Markdown</div>
+              <div>图片语义化</div>
+              <div>标题层级切分</div>
+              <div>商品名识别</div>
+              <div>Embedding</div>
+              <div>向量入库</div>
+            </div>
+          </section>
         </div>
 
-        <div class="panel" id="query">
-          <div class="panel-head">
-            <h2>知识问答</h2>
-            <span>本地混合检索</span>
-          </div>
-          <form id="queryForm" class="query-box">
-            <textarea id="queryInput" rows="4" placeholder="例如：RS-12 如何测量直流电压？"></textarea>
-            <button type="submit">检索回答</button>
-          </form>
-          <div id="answerBox" class="answer muted">导入文档后开始提问。</div>
-        </div>
-      </section>
+        <div class="column right-column">
+          <section class="panel query-panel" id="query">
+            <div class="panel-head">
+              <div>
+                <span class="label">Retrieval QA</span>
+                <h2>知识问答</h2>
+              </div>
+              <span class="meta">本地混合检索</span>
+            </div>
+            <form id="queryForm" class="query-box">
+              <textarea id="queryInput" rows="4" placeholder="例如：RS-12 如何测量直流电压？"></textarea>
+              <button type="submit" class="primary-action">检索回答</button>
+            </form>
+            <div id="answerBox" class="answer muted scroll-box">导入文档后开始提问。</div>
+          </section>
 
-      <section class="panel" id="pipeline">
-        <div class="panel-head">
-          <h2>导入处理链路</h2>
-          <span>LangGraph 节点模型</span>
-        </div>
-        <div class="flow">
-          <div>Entry</div>
-          <div>PDF 转 Markdown</div>
-          <div>图片语义化</div>
-          <div>标题层级切分</div>
-          <div>商品名识别</div>
-          <div>Embedding</div>
-          <div>向量入库</div>
-        </div>
-      </section>
+          <section class="asset-grid" id="library">
+            <div class="panel asset-panel">
+              <div class="panel-head">
+                <div>
+                  <span class="label">Documents</span>
+                  <h2>已导入文档</h2>
+                </div>
+                <span id="docCount" class="meta">0</span>
+              </div>
+              <div id="documents" class="documents scroll-box"></div>
+            </div>
 
-      <section class="panel">
-        <div class="panel-head">
-          <h2>已导入文档</h2>
-          <span id="docCount">0</span>
+            <div class="panel asset-panel">
+              <div class="panel-head">
+                <div>
+                  <span class="label">Tasks</span>
+                  <h2>导入任务</h2>
+                </div>
+                <span id="taskCount" class="meta">0</span>
+              </div>
+              <div id="tasks" class="tasks scroll-box"></div>
+            </div>
+          </section>
         </div>
-        <div id="documents" class="documents"></div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <h2>导入任务</h2>
-          <span id="taskCount">0</span>
-        </div>
-        <div id="tasks" class="tasks"></div>
       </section>
     </main>
 

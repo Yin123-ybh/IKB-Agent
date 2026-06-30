@@ -10,6 +10,14 @@ const documentsBox = document.querySelector("#documents");
 const docCount = document.querySelector("#docCount");
 const tasksBox = document.querySelector("#tasks");
 const taskCount = document.querySelector("#taskCount");
+const fileName = document.querySelector("#fileName");
+const parseModeInputs = document.querySelectorAll('input[name="parseMode"]');
+const modeCards = document.querySelectorAll("[data-mode-card]");
+
+const parseModeLabels = {
+  pypdf: "轻量版 pypdf",
+  mineru: "增强版 MinerU",
+};
 
 async function api(path, options = {}) {
   const response = await fetch(path, options);
@@ -32,6 +40,10 @@ async function loadHealth() {
 async function loadDocuments() {
   const data = await api("/api/documents");
   docCount.textContent = `${data.documents.length} 个文档`;
+  if (!data.documents.length) {
+    documentsBox.innerHTML = `<div class="empty">暂无文档，先导入一份资料。</div>`;
+    return;
+  }
   documentsBox.innerHTML = data.documents
     .map(
       (doc) => `
@@ -40,7 +52,7 @@ async function loadDocuments() {
             <strong>${escapeHtml(doc.file_title)}</strong>
             <span>${escapeHtml(doc.item_name)} · ${doc.chunk_count} chunks · ${doc.created_at}</span>
           </div>
-          <span>${escapeHtml(doc.file_name)}</span>
+          <span class="file-tag">${escapeHtml(doc.file_name)}</span>
         </div>
       `
     )
@@ -50,6 +62,10 @@ async function loadDocuments() {
 async function loadTasks() {
   const data = await api("/api/tasks");
   taskCount.textContent = `${data.tasks.length} 个任务`;
+  if (!data.tasks.length) {
+    tasksBox.innerHTML = `<div class="empty">暂无导入任务。</div>`;
+    return;
+  }
   tasksBox.innerHTML = data.tasks
     .map(
       (task) => `
@@ -58,12 +74,20 @@ async function loadTasks() {
             <strong>${escapeHtml(task.file_name)}</strong>
             <span>${task.progress}% · ${escapeHtml(task.message)} · ${escapeHtml(task.trace.join(" -> "))}</span>
           </div>
-          <span class="badge ${task.status === "failed" ? "failed" : ""}">${escapeHtml(task.status)}</span>
+          <span class="badge ${task.status === "failed" ? "failed" : ""} ${task.status === "processing" ? "processing" : ""}">${escapeHtml(task.status)}</span>
         </div>
       `
     )
     .join("");
 }
+
+parseModeInputs.forEach((input) => {
+  input.addEventListener("change", syncParseModeCards);
+});
+
+fileInput.addEventListener("change", () => {
+  fileName.textContent = fileInput.files.length ? fileInput.files[0].name : "选择一个知识文档";
+});
 
 uploadForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -71,12 +95,16 @@ uploadForm.addEventListener("submit", async (event) => {
     importResult.textContent = "请先选择一个文件。";
     return;
   }
+  const parseMode = getSelectedParseMode();
   const form = new FormData();
   form.append("file", fileInput.files[0]);
-  importResult.textContent = "正在执行导入链路...";
+  importResult.textContent = `正在执行导入链路...
+前端选择：${parseModeLabels[parseMode]}
+提示：当前后端仍按 .env 中的 PDF_PARSE_BACKEND 执行。`;
   try {
     const data = await api("/api/import", { method: "POST", body: form });
     importResult.textContent = `${data.message.includes("warnings") ? "导入完成但有警告" : "导入成功"}：${data.document.file_title}
+前端选择：${parseModeLabels[parseMode]}
 商品名：${data.document.item_name}
 Chunk 数量：${data.document.chunk_count}
 提示：${data.message}
@@ -89,10 +117,13 @@ Chunk 数量：${data.document.chunk_count}
 });
 
 demoImportBtn.addEventListener("click", async () => {
-  importResult.textContent = "正在导入示例文档...";
+  const parseMode = getSelectedParseMode();
+  importResult.textContent = `正在导入示例文档...
+前端选择：${parseModeLabels[parseMode]}`;
   try {
     const data = await api("/api/demo-import", { method: "POST" });
     importResult.textContent = `示例导入成功：${data.document.file_title}
+前端选择：${parseModeLabels[parseMode]}
 商品名：${data.document.item_name}
 Chunk 数量：${data.document.chunk_count}
 执行链路：${data.trace.join(" -> ")}`;
@@ -143,6 +174,18 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function getSelectedParseMode() {
+  return document.querySelector('input[name="parseMode"]:checked')?.value || "pypdf";
+}
+
+function syncParseModeCards() {
+  const selected = getSelectedParseMode();
+  modeCards.forEach((card) => {
+    card.classList.toggle("selected", card.dataset.modeCard === selected);
+  });
+}
+
+syncParseModeCards();
 loadHealth();
 loadDocuments();
 loadTasks();
